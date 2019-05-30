@@ -17,3 +17,14 @@ Microkernel也是现在广泛采用的一种设计，这种内核的特点是只
 Exokernel微内核的核心观点是：只要内核还提供对系统资源的抽象，就不能实现性能的最大优化 -- 内核应该支持一个最小的、高度优化的原语集，而不是提供对系统资源的抽象。从这个观点上来说，IPC也是一个太高级的抽象因而不能达到最高的性能。Exokernel微内核的核心是支持一个高度优化的原语名叫保护控制转移(protected control transfer, PCT)。PCT是一个不带参数的跨地址空间的过程调用，其功能类似于一个硬件中断。在PCT的基础上，可以实现高级的IPC抽象如RPC。在MIPS R3000处理器上，一个基于PCT的RPC实现了仅10µs的开销，而在同一硬件上运行的Mach RPC为95µs。
 Exokernel的一个核心思想是保护与管理的分离，具体来说，它会提供给用户管理的权限，不去限制这一部分的功能，转而保护系统上的资源，从而实现保护与管理的分离。
 ![](https://github.com/CurryTang/OperatingSystemLearningNotes/blob/master/exokernel.JPG)
+最后来看一下不同内核的对比
+![](https://github.com/CurryTang/OperatingSystemLearningNotes/blob/master/compar.JPG)
+
+## 启动
+先大概回忆一下x86下的编程模式
+* eip寄存器指向下一条将要执行的语句，call, ret, jmp以及conditional jump这些指令会修改eip的值
+* Intel x86下分为几种模式,不同的模式下会有不同的寻址方式
+![](https://github.com/CurryTang/OperatingSystemLearningNotes/blob/master/x86mode.JPG)
+
+接下来再介绍一些非常重要的寄存器，之后的lab里基本就在与这些打交道了=^=
+### eflags寄存器
