@@ -28,3 +28,14 @@ Exokernel的一个核心思想是保护与管理的分离，具体来说，它�
 
 接下来再介绍一些非常重要的寄存器，之后的lab里基本就在与这些打交道了=^=
 ### eflags寄存器
+eflags寄存器记录了我们的system flags
+![](https://www.google.com/url?sa=i&source=images&cd=&ved=2ahUKEwjosLLqj8PiAhWL0FQKHWhUDXcQjRx6BAgBEAU&url=http%3A%2F%2Fwww.c-jump.com%2FCIS77%2FASM%2FInstructions%2FI77_0050_eflags.htm&psig=AOvVaw2zeBviztfPucd2_RnJuIvK&ust=1559301208653741)
+
+eflags里的位往往会记录与前几次计算的结果有关的值，比如是否有进位，是否为正，同时也有一些系统状态位，比如interrupt是否打开，在之后我们处理trapframe的时候eflags是非常重要的一个结构
+
+### CR系寄存器
+![](https://github.com/CurryTang/OperatingSystemLearningNotes/blob/master/cr.JPG)
+CR系的寄存器在以后的操作系统开发中会时常与我们见面，用的最多的相信就是大家耳熟能详的CR3,记录了PDB的位置；CR2则是记录了上一次page fault具体出错的address,CR0和memory相关的设置相关，CR4用的相对较少，之后你会在内存管理碰到4M大页时与CR4打交道。
+
+剩下的课件里还有GDTR,IDTR,TSS等结构，我觉得放在后面的部分比较好。
+
