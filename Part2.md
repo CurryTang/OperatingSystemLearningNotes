@@ -222,10 +222,40 @@ asm ("movl %0,%%eax;
 简单来说就是通过base和bounds两个指针划定了一块区域
 系统主要有三个descriptor表,GDT,LDT,IDT.这里我们用的是GDT
 对于CPU来说，这些表的形式为(size, linear address)
+
 一个GDT的例子
 ```
 GDT[0] = {.base=0, .limit=0, .type=0};                     // Selector 0x00 cannot be used
 GDT[1] = {.base=0, .limit=0xffffffff, .type=0x9A};         // Selector 0x08 will be our code
 GDT[2] = {.base=0, .limit=0xffffffff, .type=0x92};         // Selector 0x10 will be our data
 GDT[3] = {.base=&myTss, .limit=sizeof(myTss), .type=0x89}; // You can use LTR(0x18)
+```
+
+## 内存模型
+计算机的内存管理机制是Page + Segmentation. 
+首先看一下page的机制
+![](https://images2018.cnblogs.com/blog/1286804/201807/1286804-20180713113554366-611065232.png)
+![](http://www.cs.uni.edu/~fienup/cs142f05/lectures/4360ceb7.jpg)
+怎么理解logical address与linear address呢？我的理解是把它们看做存储结构的index会比较好理解。
+
+### PDE,PTE,PF
+我们以xv6的三级页表为例来讲解内存模型。
+PDE全称page directory entry,是page directory的一项，里面存的是一个page table,CR3存放了指向page directory table的指针
+PTE全称page table entry,里面存放了page frame
+PF就是page frame,具体的物理页
+pde与pte的结构是类似的，可以理解成一个线性表，地址就是这个线性表的index(当然为了存储空间着想，很多位置都是没有初始化的，同时大多数页表也采用了COW技术)。除了具体内容以外，还存放了大量的权限位，包括读写权限，也包括诸如PSE这类的大页设定参数。
+
+![](http://pekopeko11.sakura.ne.jp/unix_v6/xv6-book/en/_images/F2-2.png)
+```
+1804 static struct kmap {
+1805 void *virt;
+1806 uint phys_start;
+1807 uint phys_end;
+1808 int perm;
+1809 } kmap[] = {
+1810 { (void*)KERNBASE, 0, EXTMEM, PTE_W}, // I/O space
+1811 { (void*)KERNLINK, V2P(KERNLINK), V2P(data), 0}, // kern text+rodata
+1812 { (void*)data, V2P(data), PHYSTOP, PTE_W}, // kern data+memory
+1813 { (void*)DEVSPACE, DEVSPACE, 0, PTE_W}, // more devices
+1814 };
 ```
