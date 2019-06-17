@@ -286,3 +286,14 @@ struct IDTDescr {
 ![](http://www.scs.stanford.edu/05au-cs240c/lab/i386/fig9-1.gif)
 处理一个exception的时候，下面的结构会被push到kernel stack上，意味着具有完全的运行权限
 ![](http://sop.upv.es/gii-dso/en/t5-llamadas-al-sistema/int_stack.png)
+
+在下面这些情况下，会发生从user level跳转到kernel level的情况
+* device interrupt(NMI, INTR 输入， INTA 输出)
+* software interrupt int(system call属于这类)
+* program faults(除零错误)
+
+返回时，执行iret指令，并且
+* 恢复上下文
+* 从kernel mode跳转到user mode
+* 继续执行
+
