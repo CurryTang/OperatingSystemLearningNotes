@@ -287,13 +287,146 @@ struct IDTDescr {
 处理一个exception的时候，下面的结构会被push到kernel stack上，意味着具有完全的运行权限
 ![](http://sop.upv.es/gii-dso/en/t5-llamadas-al-sistema/int_stack.png)
 
+
+
 在下面这些情况下，会发生从user level跳转到kernel level的情况
 * device interrupt(NMI, INTR 输入， INTA 输出)
 * software interrupt int(system call属于这类)
 * program faults(除零错误)
 
+int 指令会做下面这些事
+* decide the vector number, in this case it's the 0x40 in int 0x40.
+* fetch the interrupt descriptor for vector 0x40 from the IDT. 
+* the CPU finds it by taking the 0x40'th 8-byte entry starting at the physical address that the IDTR CPU register points to.
+* check that CPL <= DPL in the descriptor (but only if INT instruction).
+* save ESP and SS in a CPU-internal register (but only if target segment selector's PL < CPL).
+* load SS and ESP from TSS ("")
+* push user SS ("")
+* push user ESP ("")
+* push user EFLAGS
+* push user CS
+* push user EIP
+* clear some EFLAGS bits
+* set CS and EIP from IDT descriptor's segment selector and offset
+
 返回时，执行iret指令，并且
 * 恢复上下文
 * 从kernel mode跳转到user mode
 * 继续执行
+
+Intel对于这些内容有一套自己的terminology
+* interrupts async 
+ * maskable 与IRQ有关
+ * nonmaskable 
+* exceptions (sync)
+ * fault (page fault)
+ * trap (breakpoint)
+ * abort 
+* software interrupts (int command)
+
+![](http://www.eeeguide.com/wp-content/uploads/2018/08/8086-Interrupts.jpg)
+
+早期8259A, 每块board可以handle8个interrupt
+0-7 master, 8-15 slave
+
+现在的CPU使用层次级的APIC,有I/O APIC以及LAPIC 前端有一个总的I/O APIC 每个CPU有LAPIC
+然后CPU通过自己的LAPIC与system bus相连接，再与I/O APIC进行交互
+
+那么这里的IRQ与我们之前介绍的trapvector有什么关系？
+trapvector number一般等于IRQ#+32 
+前三十二位一般是nonmaskable interrupt 128位是system call
+
+Intel对于interrupt有一套规则
+从高到低分别是 divide zero error/int command -> NMI -> INTR -> TRAP flag
+
+有关interrupt的另一个问题是
+
+有关嵌套的一个总结
+Interrupts can be interrupted
+By different interrupts; handlers need not be reentrant
+Small portions execute with interrupts disabled
+Interrupts remain pending until acked by CPU
+Exceptions can be interrupted
+By interrupts (devices needing service)
+Exceptions can nest two levels deep
+Exceptions indicate coding error
+Exception code (kernel code) should not have bugs
+Page fault is possible (trying to touch user data)
+
+IDT,GDT
+The Global Descriptor Table (GDT)
+	defines the system's memory-segments and their access-privileges, which the CPU has the duty to enforce 
+
+
+The Interrupt Descriptor Table (IDT)
+	defines entry-points for the various code-routines that will handle all 'interrupts' and 'exceptions‘
+
+The Task-State Segment (TSS) 
+	holds the values for registers SS and ESP that will get loaded by the CPU upon entering kernel-mode
+
+> All the information the processor needs in order to manage a task is stored in a special type of segment, a task state segment (TSS).
+
+![](https://image.slidesharecdn.com/protectionmode-140312004814-phpapp01/95/protection-mode-9-638.jpg?cb=1394585348)
+
+中断的处理是分上下部分的，上半部分的处理比较简单，主要就是使用ISR，使用对应的handler处理中断
+
+需要注意中断处理是没有上下文context的
+
+下半部分的处理有几种常见的机制
+首先下半部分的处理有一些硬性规定
+不能sleep(),不能被调度，不能从user space交换数据
+
+sleep的后果 deadlock
+Process1 enters kernel mode.
+Process1 acquires LockA.
+Interrupt occurs.
+ISR tries to acquire LockA.
+ISR calls sleep to wait for LockA to be released.
+
+对于exception来说，在处理的时候会使用Process的kernel stack
+而对于interrupt和soft irq会使用irq stack
+
+softirq 
+
+有如下的运行时机
+After system calls
+
+After exceptions
+
+After interrupts (top halves/IRQs, including the timer intr)
+
+When the scheduler runs ksoftirqd
+可以被中断抢占
+
+tasklet 基于softirq实现 softirq是静态定义的 tasklet可以动态定义新的类型
+
+workqueue 通过kernel thread来执行，可以参加调度，可以sleep
+
+system call
+对于程序来说，两种办法 library function/通过汇编 int指令
+对于machine来说， int/sysenter/syscall
+
+syscall的参数 第一个参数总是syscall#也就是eax 如果需要超过六个的参数，可以保存在一个struct里，然后提供一个指向struct的指针
+
+system call的过程
+Fetch the n’th descriptor from the IDT, where n is the argument of int. 
+
+Check that CPL in %cs is <= DPL, where DPL is the privilege level in the descriptor. 
+
+Save %esp and %ss in a CPU-internal registers, but only if the target segment selector’s PL < CPL. 
+
+Load %ss and %esp from a task segment descriptor. 
+
+Push %ss, %esp, %eflags, %cs, %eip,
+
+Clear some bits of %eflags
+
+Set %cs and %eip to the values in the descriptor
+
+VDSO 简化一些不必要的syscall,把它们映射到user space, read only
+
+flex-sc 引入system call page,从而不必要再context switch了
+
+
+
 
