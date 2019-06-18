@@ -255,6 +255,61 @@ NTFS中的文件模型：每个文件都被视为一系列file attribute的集�
 
 
 ### Flash FS
+flash disk:chip->blocks->page->cell
+read/write unit: page
+erase unit: block
+
+flexfs
+Hot/Cold SLC Region/MLC Region 
+MLC 2bits per cell, SLC 1 bit per cell MLC的performance较差，性价比高
+
+### Log-based FS
+Key idea: buffer all writes
+先存储在内存里，到达一个threshold后写回到硬盘上
+为了记录inode的信息，把inode有关的更新信息也append到log的尾部
+superblock记录了一个指向inode map的指针
+garbage collection会被周期性地调用
+
+### GFS
+Google File System设计的目标:Performance, Scalability, Reliability, Availability
+常见的工作场景
+* large streaming reads
+* small random reads
+* sequential writes
+接口：create, delete, open, close, read, and write，snapshot (not POSIX)
+![](https://www.researchgate.net/profile/Marta_Mattoso/publication/278629912/figure/fig14/AS:282262210924544@1444307963060/GFS-architecture-45.png)
+GFS Cluster: Single Master + Multiple Chunkservers
+Chunkserver: Each chunk has a globally unique 64-bit chunk handle.
+metadata存储在single master上
+设计理念：
+* 实现了控制流与数据流的分离
+* 如果要访问metadata,访问记录了metadata的master,否则访问数据的话直接访问chunkserver
+* 不使用cache
+
+master上的metadata
+* Chunk namespaces
+* Mapping from files to chunks
+* Location of chunk replicas
+
+master通过heartbeat消息来与chunk进行交互
+
+chunkserver block 64MB,3次备份
+
+Why a single master?
+有shadow master的存在，master不传输数据，不会是瓶颈
+
+### NFS network file system
+Usually slower than local
+Improve by caching at client
+Goal: reduce number of remote ops
+Caching: read, readlink, getattr, lookup, readdir
+Cache file data at client (buffer cache)
+Cache file attribute information at client
+Cache pathname bindings for faster lookup
+Server side
+Caching is “automatic” via buffer cache
+All NFS writes are write-through to disk
+
 
 
 
